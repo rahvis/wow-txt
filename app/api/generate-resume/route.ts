@@ -1,32 +1,10 @@
 import { NextResponse } from "next/server";
 import { MongoClient } from "mongodb";
-import { OpenAI } from "langchain/llms/openai";
-import { PromptTemplate } from "langchain/prompts";
-import { LLMChain } from "langchain/chains";
+import OpenAI from "openai";
 
-const model = new OpenAI({ modelName: "gpt-4", temperature: 0.9 });
-
-const template = `
-As an expert recruiter, create a professional resume based on the following conversation transcript. Focus on highlighting key skills, experiences, and achievements:
-
-{conversation}
-
-Format the resume with the following sections:
-1. Summary
-2. Skills
-3. Professional Experience
-4. Education
-5. Achievements
-
-Be concise and professional in your language.
-`;
-
-const prompt = new PromptTemplate({
-  template: template,
-  inputVariables: ["conversation"],
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY, // Ensure this is set in .env.local
 });
-
-const chain = new LLMChain({ llm: model, prompt: prompt });
 
 export async function POST(req: Request) {
   try {
@@ -35,7 +13,6 @@ export async function POST(req: Request) {
     // Connect to MongoDB
     const client = new MongoClient(process.env.MONGODB_URI as string);
     await client.connect();
-
     const db = client.db("jobs");
     const collection = db.collection("jobdata");
 
@@ -50,28 +27,51 @@ export async function POST(req: Request) {
       );
     }
 
-    // Extract the conversation from the document
-    const conversation = document.conversation;
-
-    // Prepare the conversation text
-    const conversationText = conversation
+    // Extract conversation transcript
+    const conversationText = document.conversation
       .map((item: any) => (typeof item === "string" ? item : item.RME || ""))
       .join("\n");
 
-    // Generate resume content using LangChain
-    const result = await chain.call({ conversation: conversationText });
-    const resumeContent = result.text;
+    // OpenAI prompt to generate a professional resume
+    const prompt = `
+As an expert recruiter, create a professional resume based on the following conversation transcript. Focus on key skills, experiences, and achievements:
+
+${conversationText}
+
+Format the resume with these sections:
+1. Summary
+2. Skills
+3. Professional Experience
+4. Education
+5. Achievements
+
+Use concise and professional language.
+`;
+
+    // Call OpenAI API
+    const response = await openai.chat.completions.create({
+      model: "gpt-4",
+      messages: [
+        { role: "system", content: "You are a professional resume writer." },
+        { role: "user", content: prompt },
+      ],
+      temperature: 0.7,
+    });
+
+    const resumeContent =
+      response.choices[0]?.message?.content || "Error: No resume generated.";
+
+    console.log("Generated Resume:", resumeContent); // Debug log
 
     // Convert resume content into a text file
-    const textFile = new Blob([resumeContent], { type: "text/plain" });
-    const textFileBuffer = await textFile.arrayBuffer();
+    const textFileBuffer = Buffer.from(resumeContent, "utf-8");
 
     await client.close();
 
-    return new NextResponse(Buffer.from(textFileBuffer), {
+    return new Response(textFileBuffer, {
       headers: {
-        "Content-Type": "text/plain",
-        "Content-Disposition": `attachment; filename=${phoneNumber}_resume.txt`,
+        "Content-Type": "text/plain; charset=utf-8",
+        "Content-Disposition": `attachment; filename="${phoneNumber}_resume.txt"`,
       },
     });
   } catch (error: any) {

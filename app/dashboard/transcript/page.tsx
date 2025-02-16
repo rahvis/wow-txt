@@ -63,17 +63,12 @@ export default function Transcript() {
         throw new Error("Failed to generate resume")
       }
 
-      const resumeContent = await response.text()
-
-      // Create a Blob with the resume content
-      const blob = new Blob([resumeContent], { type: "text/plain" })
+      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
-
-      // Create a link and trigger the download
       const a = document.createElement("a")
       a.style.display = "none"
       a.href = url
-      a.download = `${transcript.phone_number}_resume.txt`
+      a.download = `${transcript.phone_number}_resume.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
