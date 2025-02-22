@@ -101,7 +101,7 @@ export async function POST(req: Request) {
       // Remove any potential markdown formatting or extra characters
       const jsonContent = content.replace(/```json\n?|\n?```/g, "").trim();
       resumeData = JSON.parse(jsonContent);
-    } catch (parseError) {
+    } catch (parseError: Error) {
       console.error("JSON parsing error:", parseError);
       return NextResponse.json(
         { error: "Failed to parse resume data", details: parseError.message },
