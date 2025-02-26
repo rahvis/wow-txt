@@ -1,22 +1,40 @@
-import { NextResponse } from "next/server"
-import { MongoClient } from "mongodb"
+import { NextResponse } from "next/server";
+import clientPromise from "@/lib/mongodb";
 
-export async function GET() {
+const DB_NAME = "wow-agent";
+const COLLECTION_NAME = "wow-agent-transcript";
+
+export async function GET(req: Request) {
   try {
-    const client = new MongoClient(process.env.MONGODB_URI as string)
-    await client.connect()
+    const url = new URL(req.url);
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const limit = parseInt(url.searchParams.get("limit") || "5", 10);
+    const skip = (page - 1) * limit;
 
-    const db = client.db("jobs")
-    const collection = db.collection("jobdata")
+    const client = await clientPromise;
+    const db = client.db(DB_NAME);
+    const collection = db.collection(COLLECTION_NAME);
 
-    const transcripts = await collection.find({}).toArray()
+    // Fetch paginated transcripts
+    const transcripts = await collection
+      .find()
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+    const totalDocuments = await collection.countDocuments();
 
-    await client.close()
-
-    return NextResponse.json(transcripts)
+    return NextResponse.json({
+      transcripts, // Ensure this is always an array
+      pagination: {
+        page,
+        totalPages: Math.ceil(totalDocuments / limit),
+      },
+    });
   } catch (error) {
-    console.error("Error fetching transcripts:", error)
-    return NextResponse.json({ error: "Failed to fetch transcripts" }, { status: 500 })
+    console.error("Error fetching transcripts:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch transcripts" },
+      { status: 500 }
+    );
   }
 }
-

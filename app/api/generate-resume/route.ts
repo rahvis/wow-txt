@@ -3,20 +3,27 @@ import { MongoClient } from "mongodb";
 import { Document, Paragraph, TextRun, HeadingLevel, Packer } from "docx";
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT;
-const AZURE_OPENAI_KEY = process.env.AZURE_OPENAI_KEY;
+const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY;
+const MONGODB_URI = process.env.MONGODB_URI;
 
 export async function POST(req: Request) {
   try {
     const { phoneNumber } = await req.json();
+    console.log("phoneNumber", phoneNumber);
+
+    if (!MONGODB_URI) {
+      throw new Error("MONGODB_URI is not defined.");
+    }
 
     // Connect to MongoDB
-    const client = new MongoClient(process.env.MONGODB_URI as string);
+    const client = new MongoClient(MONGODB_URI);
     await client.connect();
-    const db = client.db("jobs");
-    const collection = db.collection("jobdata");
+    const db = client.db("wow-agent");
+    const collection = db.collection("wow-agent-transcript");
 
     // Find the document with the matching phone number
     const document = await collection.findOne({ phone_number: phoneNumber });
+    console.log("document", document);
 
     if (!document) {
       await client.close();
@@ -27,12 +34,14 @@ export async function POST(req: Request) {
     }
 
     // Extract conversation transcript
-    const conversationText = document.conversation
-      .map((item: any) => (typeof item === "string" ? item : item.RME || ""))
+    const conversationText = document.transcript
+      .map((item: any) => `${item.role}: ${item.text}`)
       .join("\n");
 
+    console.log("conversationText", conversationText);
+
     // Modified prompt to ensure proper JSON response
-    const prompt = `As a professional resume writer, analyze this conversation between an HR recruiter and a candidate, and generate a structured resume. Format your response as a valid JSON object with the following structure, and ensure it contains only the JSON object with no additional text or formatting:
+    const prompt = `As a professional resume writer, analyze this conversation between an HR recruiter and a candidate, and generate a structured resume. Format your response as a valid JSON object:
     {
       "summary": "brief professional summary",
       "skills": ["skill1", "skill2"],
@@ -60,8 +69,8 @@ export async function POST(req: Request) {
     Conversation transcript:
     ${conversationText}`;
 
-    if (!AZURE_OPENAI_ENDPOINT) {
-      throw new Error("AZURE_OPENAI_ENDPOINT is not defined.");
+    if (!AZURE_OPENAI_ENDPOINT || !AZURE_OPENAI_API_KEY) {
+      throw new Error("Azure OpenAI environment variables are not defined.");
     }
 
     const request = new Request(AZURE_OPENAI_ENDPOINT, {
@@ -75,11 +84,11 @@ export async function POST(req: Request) {
           },
           { role: "user", content: prompt },
         ],
-        temperature: 0.7,
+        temperature: 0.1,
       }),
       headers: {
         "Content-Type": "application/json",
-        ...(AZURE_OPENAI_KEY && { "api-key": AZURE_OPENAI_KEY }),
+        ...(AZURE_OPENAI_API_KEY && { "api-key": AZURE_OPENAI_API_KEY }),
       },
     });
 
@@ -115,13 +124,10 @@ export async function POST(req: Request) {
         {
           properties: {},
           children: [
-            // Name and Contact Info
             new Paragraph({
               text: phoneNumber,
               heading: HeadingLevel.TITLE,
             }),
-
-            // Professional Summary
             new Paragraph({
               text: "Professional Summary",
               heading: HeadingLevel.HEADING_1,
@@ -129,8 +135,6 @@ export async function POST(req: Request) {
             new Paragraph({
               text: resumeData.summary || "",
             }),
-
-            // Skills
             new Paragraph({
               text: "Core Competencies & Skills",
               heading: HeadingLevel.HEADING_1,
@@ -140,8 +144,6 @@ export async function POST(req: Request) {
                 (skill: string) => new TextRun({ text: `• ${skill}\n` })
               ),
             }),
-
-            // Experience
             new Paragraph({
               text: "Professional Experience",
               heading: HeadingLevel.HEADING_1,
@@ -159,8 +161,6 @@ export async function POST(req: Request) {
                   })
               ),
             ]),
-
-            // Education
             new Paragraph({
               text: "Education",
               heading: HeadingLevel.HEADING_1,
@@ -171,8 +171,6 @@ export async function POST(req: Request) {
                   text: `${edu.degree} - ${edu.institution}, ${edu.year}`,
                 })
             ),
-
-            // Certifications
             new Paragraph({
               text: "Certifications",
               heading: HeadingLevel.HEADING_1,
@@ -183,8 +181,6 @@ export async function POST(req: Request) {
                   text: `• ${cert}`,
                 })
             ),
-
-            // References
             new Paragraph({
               text: "References",
               heading: HeadingLevel.HEADING_1,
