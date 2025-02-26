@@ -1,32 +1,32 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const defaultContacts = [
   { name: "John Smith", mobile: "+1234567890", job: "Software Engineer" },
   { name: "Sarah Wilson", mobile: "+9876543210", job: "Product Manager" },
   { name: "Michael Chen", mobile: "+1122334455", job: "UX Designer" },
-]
+];
 
 export default function Call() {
-  const [number, setNumber] = useState("")
-  const [callStatus, setCallStatus] = useState("")
+  const [number, setNumber] = useState("");
+  const [callStatus, setCallStatus] = useState("");
 
   const handleCall = () => {
-    if (!number) return
-    setCallStatus(`Calling ${number}...`)
+    if (!number) return;
+    setCallStatus(`Calling ${number}...`);
     // Simulate a call
     setTimeout(() => {
-      setCallStatus(`Call to ${number} ended`)
-    }, 3000)
-  }
+      setCallStatus(`Call to ${number} ended`);
+    }, 3000);
+  };
 
   const handleContactClick = (mobile: string) => {
-    setNumber(mobile)
-  }
+    setNumber(mobile);
+  };
 
   return (
     <Card>
@@ -55,8 +55,12 @@ export default function Call() {
                 >
                   <div className="space-y-1">
                     <p className="font-medium">{contact.name}</p>
-                    <p className="text-sm text-muted-foreground">{contact.mobile}</p>
-                    <p className="text-sm text-muted-foreground">{contact.job}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {contact.mobile}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {contact.job}
+                    </p>
                   </div>
                 </Card>
               ))}
@@ -70,6 +74,5 @@ export default function Call() {
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
-
