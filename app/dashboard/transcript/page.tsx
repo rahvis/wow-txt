@@ -73,7 +73,7 @@ export default function TranscriptPage() {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      a.download = `${transcript.phone_number}_resume.pdf`;
+      a.download = `${transcript.phone_number}_resume.docx`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
