@@ -19,6 +19,7 @@ export async function GET(req: Request) {
     const transcripts = await collection
       .find()
       .skip(skip)
+      .sort({ timestamp: -1 }) // Sort by latest timestamp first
       .limit(limit)
       .toArray();
     const totalDocuments = await collection.countDocuments();
