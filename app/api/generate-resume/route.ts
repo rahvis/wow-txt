@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     const client = new MongoClient(MONGODB_URI);
     await client.connect();
     const db = client.db("wow-agent");
-    const collection = db.collection("wow-agent-transcript");
+    const collection = db.collection("Transcripts");
 
     // Find the document with the matching phone number
     const document = await collection.findOne({ phone_number: phoneNumber });

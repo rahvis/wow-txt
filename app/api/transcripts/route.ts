@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import clientPromise from "@/lib/mongodb";
 
 const DB_NAME = "wow-agent";
-const COLLECTION_NAME = "wow-agent-transcript";
+const COLLECTION_NAME = "Transcripts";
 
 export async function GET(req: Request) {
   try {
